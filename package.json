@@ -9,8 +9,10 @@
   "main": "src/formatter.js",
   "type": "commonjs",
   "scripts": {
-    "format:examples": "node bin/format-ts.js --dir examples",
-    "format:examples:check": "node bin/format-ts.js --dir examples --check"
+    "format:examples": "node bin/format-ts.js examples",
+    "format:examples:check": "node bin/format-ts.js examples --check",
+    "build:bun": "bash ./build-bun.sh",
+    "build:bun:all": "TARGETS=all bash ./build-bun.sh"
   },
   "keywords": [
     "typescript",

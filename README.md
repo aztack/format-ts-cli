@@ -29,13 +29,13 @@ npm install
 2. 使用 Node 直接运行 CLI，对自带示例进行格式化：
 
 ```bash
-node bin/format-ts.js --dir examples
+node bin/format-ts.js examples
 ```
 
 或者使用 `npx .` 通过 `package.json` 的 `bin` 字段来调用：
 
 ```bash
-npx . --dir examples
+npx . examples
 ```
 
 ### 作为依赖安装到你的项目
@@ -50,8 +50,8 @@ npm install format-ts-cli --save-dev
 
 ```json
 "scripts": {
-  "format": "format-ts --dir src",
-  "format:check": "format-ts --dir src --check"
+  "format": "format-ts src",
+  "format:check": "format-ts src --check"
 }
 ```
 
@@ -60,7 +60,7 @@ npm install format-ts-cli --save-dev
 你也可以使用 `npx` 直接运行：
 
 ```bash
-npx format-ts-cli --dir src
+npx format-ts-cli src
 ```
 
 ### 全局安装
@@ -74,17 +74,17 @@ npm install -g .
 安装后，你就可以在任何项目目录下直接运行 `format-ts` 命令。
 
 ```bash
-format-ts --dir ./path/to/your/project
+format-ts ./path/to/your/project
 ```
 
 ## 使用方法
 
 ### 基本用法
 
-最简单的用法是提供一个要格式化的目录路径：
+最简单的用法是提供一个要格式化的目录或单个文件路径：
 
 ```bash
-format-ts <目录路径>
+format-ts <目录或文件路径>
 ```
 
 例如，格式化当前目录下的 `src` 文件夹：
@@ -97,7 +97,7 @@ format-ts src
 
 | 参数 | 别名 | 描述 | 默认值 |
 |---|---|---|---|
-| `--dir <path>` | | 指定要格式化的根目录。可以被位置参数 `<dir>` 替代。 | (必须) |
+| `--dir <path>` | | 指定要格式化的根目录或文件路径。通常可以被位置参数 `<dir|file>` 替代；保留用于向后兼容。 | 可选（若提供位置参数则无需指定） |
 | `--include <glob>` | | 用于匹配文件的 glob 模式。 | `**/*.{ts,tsx,js}` |
 | `--exclude <glob>` | | 用于排除文件或目录的 glob 模式，多个模式用逗号分隔。 | `node_modules,dist,build,coverage,.git` |
 | `--concurrency <n>`| | 并发处理文件的最大数量。 | `8` |
@@ -113,7 +113,7 @@ format-ts src
 假设你的所有 TypeScript/JavaScript 源代码都存放在 `src` 目录中：
 
 ```bash
-format-ts --dir src
+format-ts src
 ```
 
 ### Dry Run 模式：预览变更
@@ -121,7 +121,7 @@ format-ts --dir src
 在实际修改文件之前，查看哪些文件将被格式化：
 
 ```bash
-format-ts --dir src --dry
+format-ts src --dry
 ```
 
 输出可能如下：
@@ -147,7 +147,7 @@ Files that would be changed:
 在 CI 流水线中，检查代码是否都已正确格式化。如果存在未格式化的文件，命令将失败，从而阻塞合并请求。
 
 ```bash
-format-ts --dir src --check
+format-ts src --check
 ```
 
 -   如果所有文件都已格式化，命令将以状态码 0 成功退出。

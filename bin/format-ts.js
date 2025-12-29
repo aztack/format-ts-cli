@@ -9,9 +9,9 @@ const { formatFile } = require("../src/formatter");
 
 function printHelp() {
   const cmd = "format-ts";
-  console.log(`Usage: ${cmd} [options] <dir>\n`);
+  console.log(`Usage: ${cmd} [options] <dir|file>\n`);
   console.log("Options:");
-  console.log("  --dir <path>         Root directory to format (alternative to positional <dir>)");
+  console.log("  --dir <path>         Root directory or file to format (alternative to positional <dir|file>)");
   console.log("  --include <glob>     Include glob (default: \"**/*.{ts,tsx,js}\")");
   console.log("  --exclude <glob>     Exclude glob(s), comma-separated (default: node_modules,dist,build,coverage,.git)");
   console.log("  --concurrency <n>    Max concurrent files to process (default: 8)");
@@ -33,14 +33,14 @@ function parseArgs(argv) {
     silent: false,
   };
 
-  let positionalDir;
+  let positionalPath;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     switch (arg) {
       case "-h":
       case "--help":
-        return { options, showHelp: true };
+        return { options, positionalPath, showHelp: true };
       case "--dir": {
         const next = args[++i];
         if (!next) throw new Error("--dir requires a value");
@@ -82,19 +82,15 @@ function parseArgs(argv) {
         if (arg.startsWith("-")) {
           throw new Error(`Unknown option: ${arg}`);
         }
-        if (!positionalDir) {
-          positionalDir = arg;
+        if (!positionalPath) {
+          positionalPath = arg;
         } else {
           throw new Error(`Unexpected positional argument: ${arg}`);
         }
     }
   }
 
-  if (!options.dir && positionalDir) {
-    options.dir = positionalDir;
-  }
-
-  return { options, showHelp: false };
+  return { options, positionalPath, showHelp: false };
 }
 
 function isTextFile(filePath) {
@@ -166,11 +162,13 @@ async function run() {
   const startTime = Date.now();
   let options;
   let showHelp;
+  let positionalPath;
 
   try {
     const parsed = parseArgs(process.argv);
     options = parsed.options;
     showHelp = parsed.showHelp;
+    positionalPath = parsed.positionalPath;
   } catch (err) {
     console.error(`Error: ${err.message}`);
     console.error("Use --help for usage information.");
@@ -183,41 +181,87 @@ async function run() {
     return;
   }
 
-  if (!options.dir) {
-    console.error("Error: directory is required. Use --dir <path> or provide a positional <dir> argument.");
-    console.error("Use --help for usage information.");
+  const targetFromFlag = options.dir;
+  const targetFromPositional = positionalPath;
+
+  if (!targetFromFlag && !targetFromPositional) {
+    printHelp();
+    console.error("\nError: target path is required.");
     process.exitCode = 2;
     return;
   }
 
-  const rootDir = path.resolve(options.dir);
-  if (!fs.existsSync(rootDir) || !fs.statSync(rootDir).isDirectory()) {
-    console.error(`Error: not a directory: ${rootDir}`);
+  if (targetFromFlag && targetFromPositional && !options.silent) {
+    console.warn(
+      "Warning: both positional path and --dir were provided; using positional path and ignoring --dir."
+    );
+  }
+
+  const rawTarget = targetFromPositional || targetFromFlag;
+  const targetPath = path.resolve(rawTarget);
+
+  if (!fs.existsSync(targetPath)) {
+    console.error(`Error: path does not exist: ${targetPath}`);
     process.exitCode = 2;
     return;
   }
 
-  if (!options.silent) {
-    console.log(`Formatting in directory: ${rootDir}`);
-    console.log(`Include: ${options.include}`);
-    console.log(`Exclude: ${options.exclude.join(", ")}`);
-    console.log(`Concurrency: ${options.concurrency}`);
-    if (options.dry) console.log("Mode: dry-run");
-    if (options.check) console.log("Mode: check");
+  let stat;
+  try {
+    stat = fs.statSync(targetPath);
+  } catch {
+    console.error(`Error: failed to stat path: ${targetPath}`);
+    process.exitCode = 2;
+    return;
   }
 
-  const files = collectFiles(rootDir, options.include, options.exclude);
+  let files = [];
 
-  if (!files.length) {
+  if (stat.isDirectory()) {
+    const rootDir = targetPath;
+
     if (!options.silent) {
-      console.log("No matching files found.");
+      console.log(`Formatting in directory: ${rootDir}`);
+      console.log(`Include: ${options.include}`);
+      console.log(`Exclude: ${options.exclude.join(", ")}`);
+      console.log(`Concurrency: ${options.concurrency}`);
+      if (options.dry) console.log("Mode: dry-run");
+      if (options.check) console.log("Mode: check");
     }
+
+    files = collectFiles(rootDir, options.include, options.exclude);
+
+    if (!files.length) {
+      if (!options.silent) {
+        console.log("No matching files found.");
+      }
+      return;
+    }
+
+    if (!options.silent) {
+      console.log(`Found ${files.length} file(s).`);
+    }
+  } else if (stat.isFile()) {
+    const ext = path.extname(targetPath).toLowerCase();
+    if (ext !== ".ts" && ext !== ".tsx" && ext !== ".js") {
+      console.error("Error: unsupported file type");
+      process.exitCode = 2;
+      return;
+    }
+
+    if (!options.silent) {
+      console.log(`Formatting file: ${targetPath}`);
+      if (options.dry) console.log("Mode: dry-run");
+      if (options.check) console.log("Mode: check");
+    }
+
+    files = [targetPath];
+  } else {
+    console.error("Error: target path is neither a file nor a directory");
+    process.exitCode = 2;
     return;
   }
 
-  if (!options.silent) {
-    console.log(`Found ${files.length} file(s).`);
-  }
 
   let filesChecked = 0;
   let filesChanged = 0;
