@@ -1,0 +1,30 @@
+{
+  "name": "format-ts-cli",
+  "version": "1.0.0",
+  "private": false,
+  "description": "Command-line tool to format *.ts, *.tsx, *.js files using TypeScript language service formatting.",
+  "bin": {
+    "format-ts": "bin/format-ts.js"
+  },
+  "main": "src/formatter.js",
+  "type": "commonjs",
+  "scripts": {
+    "format:examples": "node bin/format-ts.js --dir examples",
+    "format:examples:check": "node bin/format-ts.js --dir examples --check"
+  },
+  "keywords": [
+    "typescript",
+    "formatter",
+    "cli",
+    "language-service"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "minimatch": "^9.0.5",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
